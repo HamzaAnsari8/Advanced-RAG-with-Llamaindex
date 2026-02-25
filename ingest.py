@@ -5,6 +5,7 @@ from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from llama_index.core import StorageContext
+from llama_index.core import Document
 
 import chromadb
 
@@ -18,10 +19,22 @@ EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 # loading pdf
 documents = SimpleDirectoryReader(
     DATA_DIR,
-    recursive=True
+    recursive=True,
+    filename_as_id=True
 ).load_data()
 
-print(f"📄 Loaded {len(documents)} document chunks")
+
+cleaned_documents = []
+
+for doc in documents:
+    clean_text = doc.text.encode("utf-8", errors="ignore").decode()
+    metadata = doc.metadata or {}
+    metadata["file_name"]=metadata.get("file_name","").lower()
+    cleaned_documents.append(Document(text=clean_text,metadata=metadata))
+
+documents = cleaned_documents
+
+print(f" Loaded {len(documents)} document chunks")
 
 # calling embeding model
 embed_model = HuggingFaceEmbedding(
@@ -53,6 +66,6 @@ index = VectorStoreIndex.from_documents(
     storage_context=storage_context
 )
 
-print("✅ PDF ingestion completed")
-print(f"📁 Vector DB saved at: {VECTOR_DB_DIR}")
+print("PDF ingestion completed")
+print(f"Vector DB saved at: {VECTOR_DB_DIR}")
  
