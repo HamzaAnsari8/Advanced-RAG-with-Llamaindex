@@ -9,3 +9,4 @@ pypdf
 python-docx
 tqdm
 docx2txt
+fastapi-uvicorn

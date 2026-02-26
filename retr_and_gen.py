@@ -50,72 +50,77 @@ llm = GoogleGenAI(
 )
 
 chat_history = []
-# Query
-while True:
-    query = input("\nAsk something (or type 'exit'): ")
 
-    if query.lower() == "exit":
-        break
+def ask_question(query: str):
+    global chat_history
 
     try:
-       # Build context using history
-       full_query = ""
-       for q, a in chat_history[-2:]:
-           full_query += f"User: {q}\nAssistant: {a}\n"
+        # -------------------------------
+        # Build context using history
+        # -------------------------------
+        full_query = ""
+        for q, a in chat_history[-2:]:
+            full_query += f"User: {q}\nAssistant: {a}\n"
 
-       full_query += f"User: {query}\nAssistant:"
+        full_query += f"User: {query}\nAssistant:"
 
-       filters = None
+        filters = None
 
-       # detect file name dynamically
-       match = re.search(r"\b\w+\.(txt|pdf|docx)\b", query.lower())
+        # -------------------------------
+        # detect file name dynamically
+        # -------------------------------
+        match = re.search(r"\b\w+\.(txt|pdf|docx)\b", query.lower())
 
-       if match:
+        if match:
             file_name = match.group().lower()
 
             filters = MetadataFilters(
-                  filters=[
-            ExactMatchFilter(key="file_name", value=file_name)
-            ]
+                filters=[
+                    ExactMatchFilter(key="file_name", value=file_name)
+                ]
+            )
+
+        # -------------------------------
+        # Query engine
+        # -------------------------------
+        query_engine = index.as_query_engine(
+            llm=llm,
+            similarity_top_k=3,
+            response_mode="compact",
+            filters=filters
         )
 
-       # Query engine
-       query_engine = index.as_query_engine(
-           llm=llm,
-           similarity_top_k=3,
-           streaming=True,
-           response_mode="compact",
-           filters=filters)
+        response = query_engine.query(full_query)
 
-       response = query_engine.query(query)
+        # -------------------------------
+        # Extract answer
+        # -------------------------------
+        answer_text = response.response
 
-       print("\nAnswer:\n")
+        # -------------------------------
+        # Extract sources
+        # -------------------------------
+        sources = []
 
-       answer_text = ""
-       for token in response.response_gen:
-           print(token, end="", flush=True)
-           answer_text += token
+        if hasattr(response, "source_nodes") and response.source_nodes:
+            for node in response.source_nodes:
+                file_name = node.metadata.get("file_name", "Unknown")
+                if file_name not in sources:
+                    sources.append(file_name)
 
-       print("\n")
+        # -------------------------------
+        # Save history
+        # -------------------------------
+        chat_history.append((query, answer_text))
+        chat_history = chat_history[-3:]
 
-       # Save history (last 3 only)
-       chat_history.append((query, answer_text))
-       chat_history = chat_history[-3:]
-
-       # Show souces of documents
-       print("\nSources:\n")
-
-       if hasattr(response,"source_nodes") and response.source_nodes:
-          for i, node in enumerate(response.source_nodes):
-             file_name = node.metadata.get("file_name", "Unknown")
-             print(f"{i+1}. {file_name}")
-
-             # optional preview
-             print("Preview:", node.text[:120])
-             print("-" * 50)
-
-       else: 
-         print("No source found")    
+        return {
+            "answer": answer_text,
+            "sources": sources
+        }
 
     except Exception as e:
-       print("Error:", e)
+        return {
+            "answer": f"Error: {str(e)}",
+            "sources": []
+        }
