@@ -55,9 +55,7 @@ def ask_question(query: str):
     global chat_history
 
     try:
-        # -------------------------------
         # Build context using history
-        # -------------------------------
         full_query = ""
         for q, a in chat_history[-2:]:
             full_query += f"User: {q}\nAssistant: {a}\n"
@@ -66,9 +64,7 @@ def ask_question(query: str):
 
         filters = None
 
-        # -------------------------------
         # detect file name dynamically
-        # -------------------------------
         match = re.search(r"\b\w+\.(txt|pdf|docx)\b", query.lower())
 
         if match:
@@ -80,9 +76,7 @@ def ask_question(query: str):
                 ]
             )
 
-        # -------------------------------
         # Query engine
-        # -------------------------------
         query_engine = index.as_query_engine(
             llm=llm,
             similarity_top_k=3,
@@ -92,14 +86,10 @@ def ask_question(query: str):
 
         response = query_engine.query(full_query)
 
-        # -------------------------------
         # Extract answer
-        # -------------------------------
         answer_text = response.response
 
-        # -------------------------------
-        # Extract sources
-        # -------------------------------
+        # Extract source
         sources = []
 
         if hasattr(response, "source_nodes") and response.source_nodes:
@@ -108,9 +98,7 @@ def ask_question(query: str):
                 if file_name not in sources:
                     sources.append(file_name)
 
-        # -------------------------------
         # Save history
-        # -------------------------------
         chat_history.append((query, answer_text))
         chat_history = chat_history[-3:]
 
