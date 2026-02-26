@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from retr_and_gen import ask_question   # ✅ use your function
+from retr_and_gen import ask_question   # use your function
 
 app = FastAPI()
 
