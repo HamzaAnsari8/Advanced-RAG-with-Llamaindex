@@ -17,23 +17,22 @@ VECTOR_DB_DIR = "vectordb"
 EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 LLM_MODEL = "models/gemini-flash-latest"
 
-# Global variables (lazy load)
+#Global variables(lazy load)
 index = None
 llm = None
 
 # Chat history
 chat_history = []
 
-
-# ✅ Lazy loader function (IMPORTANT FIX)
+# Lazy loader function
 def load_rag():
     global index, llm
 
-    # If already loaded, reuse
+    # If already loaded then reuse
     if index is not None and llm is not None:
         return index, llm
 
-    print("🔄 Loading RAG components...")
+    print(" Loading RAG components...")
 
     # Embedding model
     embed_model = HuggingFaceEmbedding(
@@ -71,17 +70,16 @@ def load_rag():
         max_token=256
     )
 
-    print("✅ RAG Loaded")
+    print("RAG Loaded")
 
     return index, llm
 
-
-# ✅ Main function used by FastAPI
+# Main function used by FastAPI
 def ask_question(query: str):
     global chat_history
 
     try:
-        # 🔥 Load RAG only when needed
+        #Load RAG only when needed
         index, llm = load_rag()
 
         # Build context using history
