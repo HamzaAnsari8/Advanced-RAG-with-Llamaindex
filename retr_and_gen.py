@@ -1,60 +1,89 @@
 import os
+import re
+import chromadb
 from dotenv import load_dotenv
+
 from llama_index.core import VectorStoreIndex, StorageContext
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.vector_stores.chroma import ChromaVectorStore
-from llama_index.core.vector_stores import MetadataFilters,ExactMatchFilter
+from llama_index.core.vector_stores import MetadataFilters, ExactMatchFilter
 from llama_index.llms.google_genai import GoogleGenAI
-import re
-import chromadb
 
+# Load env variables
 load_dotenv()
 
-# config files
+# Config
 VECTOR_DB_DIR = "vectordb"
 EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 LLM_MODEL = "models/gemini-flash-latest"
 
-# Embedding model
-embed_model = HuggingFaceEmbedding(
-    model_name=EMBED_MODEL
-)
+# Global variables (lazy load)
+index = None
+llm = None
 
-# vector database Chroma DB
-chroma_client = chromadb.PersistentClient(
-    path=VECTOR_DB_DIR
-    )
-
- # collection folder's content
-collection = chroma_client.get_collection(
-    name="rag_collection"
-    )
-vector_store = ChromaVectorStore(
-    chroma_collection=collection
-    )
-storage_context = StorageContext.from_defaults(
-    vector_store=vector_store
-    )
-
-# loading index
-index = VectorStoreIndex.from_vector_store(
-    vector_store=vector_store,
-    embed_model=embed_model
-)
-
-llm = GoogleGenAI(
-    model=LLM_MODEL,
-    api_key=os.getenv("GOOGLE_API_KEY"),
-    temperature=0.2,
-    max_token=256
-)
-
+# Chat history
 chat_history = []
 
+
+# ✅ Lazy loader function (IMPORTANT FIX)
+def load_rag():
+    global index, llm
+
+    # If already loaded, reuse
+    if index is not None and llm is not None:
+        return index, llm
+
+    print("🔄 Loading RAG components...")
+
+    # Embedding model
+    embed_model = HuggingFaceEmbedding(
+        model_name=EMBED_MODEL
+    )
+
+    # Chroma DB
+    chroma_client = chromadb.PersistentClient(
+        path=VECTOR_DB_DIR
+    )
+
+    collection = chroma_client.get_collection(
+        name="rag_collection"
+    )
+
+    vector_store = ChromaVectorStore(
+        chroma_collection=collection
+    )
+
+    storage_context = StorageContext.from_defaults(
+        vector_store=vector_store
+    )
+
+    # Index
+    index = VectorStoreIndex.from_vector_store(
+        vector_store=vector_store,
+        embed_model=embed_model
+    )
+
+    # LLM
+    llm = GoogleGenAI(
+        model=LLM_MODEL,
+        api_key=os.getenv("GOOGLE_API_KEY"),
+        temperature=0.2,
+        max_token=256
+    )
+
+    print("✅ RAG Loaded")
+
+    return index, llm
+
+
+# ✅ Main function used by FastAPI
 def ask_question(query: str):
     global chat_history
 
     try:
+        # 🔥 Load RAG only when needed
+        index, llm = load_rag()
+
         # Build context using history
         full_query = ""
         for q, a in chat_history[-2:]:
@@ -64,7 +93,7 @@ def ask_question(query: str):
 
         filters = None
 
-        # detect file name dynamically
+        # Detect file name dynamically
         match = re.search(r"\b\w+\.(txt|pdf|docx)\b", query.lower())
 
         if match:
@@ -89,9 +118,8 @@ def ask_question(query: str):
         # Extract answer
         answer_text = response.response
 
-        # Extract source
+        # Extract sources
         sources = []
-
         if hasattr(response, "source_nodes") and response.source_nodes:
             for node in response.source_nodes:
                 file_name = node.metadata.get("file_name", "Unknown")
