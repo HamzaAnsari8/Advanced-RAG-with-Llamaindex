@@ -1,32 +1,22 @@
-print("staring fastapi app..")
+print("🚀 FastAPI starting...")
+
 from fastapi import FastAPI
 from pydantic import BaseModel
-from retr_and_gen import ask_question   # use your function
 
 app = FastAPI()
 
-# Request format
+# Request model
 class QueryRequest(BaseModel):
     question: str
 
-# Test route
+# Health check
 @app.get("/")
 def home():
-    return {"message": "RAG API is running "}
+    print("Home route working")
+    return {"message": "API is running"}
 
-# Main RAG route
+# Lazy import (IMPORTANT FIX)
 @app.post("/ask")
-def ask_question_api(request: QueryRequest):
-    try:
-        response = ask_question(request.question)   # use custom logic
-
-        return {
-            "question": request.question,
-            "answer": response["answer"],
-            "sources": response["sources"]   # include sources
-        }
-
-    except Exception as e:
-        return {"error": str(e)}
-
-
+def ask(query: QueryRequest):
+    from retr_and_gen import ask_question  # moved inside function
+    return ask_question(query.question)
