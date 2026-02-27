@@ -9,80 +9,88 @@ from llama_index.vector_stores.chroma import ChromaVectorStore
 from llama_index.core.vector_stores import MetadataFilters, ExactMatchFilter
 from llama_index.llms.google_genai import GoogleGenAI
 
-# Load env variables
+# Load env
 load_dotenv()
+
+# Check API key
+api_key = os.getenv("GOOGLE_API_KEY")
+if not api_key:
+    print("GOOGLE_API_KEY missing")
 
 # Config
 VECTOR_DB_DIR = "vectordb"
 EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 LLM_MODEL = "models/gemini-flash-latest"
 
-#Global variables(lazy load)
+# Globals
 index = None
 llm = None
-
-# Chat history
 chat_history = []
 
-# Lazy loader function
+
+#Lazy loader 
 def load_rag():
     global index, llm
 
-    # If already loaded then reuse
-    if index is not None and llm is not None:
+    try:
+        print("Loading RAG...")
+
+        # Embedding
+        embed_model = HuggingFaceEmbedding(
+            model_name=EMBED_MODEL
+        )
+
+        # Chroma DB
+        chroma_client = chromadb.PersistentClient(
+            path=VECTOR_DB_DIR
+        )
+
+        # SAFE collection load
+        try:
+            collection = chroma_client.get_collection(name="rag_collection")
+        except:
+            print("Collection not found, creating new one")
+            collection = chroma_client.get_or_create_collection(name="rag_collection")
+
+        vector_store = ChromaVectorStore(
+            chroma_collection=collection
+        )
+
+        storage_context = StorageContext.from_defaults(
+            vector_store=vector_store
+        )
+
+        # Index
+        index = VectorStoreIndex.from_vector_store(
+            vector_store=vector_store,
+            embed_model=embed_model
+        )
+
+        # LLM
+        llm = GoogleGenAI(
+            model=LLM_MODEL,
+            api_key=api_key,
+            temperature=0.2,
+            max_tokens=256
+        )
+
+        print("RAG Loaded")
+
         return index, llm
 
-    print(" Loading RAG components...")
+    except Exception as e:
+        print("ERROR IN load_rag:", e)
+        raise e
 
-    # Embedding model
-    embed_model = HuggingFaceEmbedding(
-        model_name=EMBED_MODEL
-    )
-
-    # Chroma DB
-    chroma_client = chromadb.PersistentClient(
-        path=VECTOR_DB_DIR
-    )
-
-    collection = chroma_client.get_collection(
-        name="rag_collection"
-    )
-
-    vector_store = ChromaVectorStore(
-        chroma_collection=collection
-    )
-
-    storage_context = StorageContext.from_defaults(
-        vector_store=vector_store
-    )
-
-    # Index
-    index = VectorStoreIndex.from_vector_store(
-        vector_store=vector_store,
-        embed_model=embed_model
-    )
-
-    # LLM
-    llm = GoogleGenAI(
-        model=LLM_MODEL,
-        api_key=os.getenv("GOOGLE_API_KEY"),
-        temperature=0.2,
-        max_token=256
-    )
-
-    print("RAG Loaded")
-
-    return index, llm
-
-# Main function used by FastAPI
+#Main function
 def ask_question(query: str):
     global chat_history
 
     try:
-        #Load RAG only when needed
+        # Load RAG only when needed
         index, llm = load_rag()
 
-        # Build context using history
+        # Build context
         full_query = ""
         for q, a in chat_history[-2:]:
             full_query += f"User: {q}\nAssistant: {a}\n"
@@ -91,15 +99,17 @@ def ask_question(query: str):
 
         filters = None
 
-        # Detect file name dynamically
+        # Detect filename
         match = re.search(r"\b\w+\.(txt|pdf|docx)\b", query.lower())
-
         if match:
             file_name = match.group().lower()
 
             filters = MetadataFilters(
                 filters=[
-                    ExactMatchFilter(key="file_name", value=file_name)
+                    ExactMatchFilter(
+                        key="file_name",
+                        value=file_name
+                    )
                 ]
             )
 
@@ -134,6 +144,7 @@ def ask_question(query: str):
         }
 
     except Exception as e:
+        print(" ERROR IN ask_question:", e)
         return {
             "answer": f"Error: {str(e)}",
             "sources": []

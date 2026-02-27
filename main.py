@@ -1,3 +1,4 @@
+print("staring fastapi app..")
 from fastapi import FastAPI
 from pydantic import BaseModel
 from retr_and_gen import ask_question   # use your function
