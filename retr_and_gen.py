@@ -85,6 +85,7 @@ def load_rag():
 
 #Main function
 def ask_question(query: str):
+    print("ask question started")
     print("ask question called")
     print("starting processing")
 
@@ -93,6 +94,7 @@ def ask_question(query: str):
     try:
         # Load RAG only when needed
         index, llm = load_rag()
+        print("load_rag completed")
 
         # Build context
         full_query = ""
@@ -116,7 +118,7 @@ def ask_question(query: str):
                     )
                 ]
             )
-
+        print("creating query engine")
         # Query engine
         query_engine = index.as_query_engine(
             llm=llm,
@@ -125,8 +127,10 @@ def ask_question(query: str):
             filters=filters
         )
 
-        response = query_engine.query(full_query)
+        print("calling llm (this may hang)")
 
+        response = query_engine.query(full_query)
+        print("got response from llm")
         # Extract answer
         answer_text = response.response
 
