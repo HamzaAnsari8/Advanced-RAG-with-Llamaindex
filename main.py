@@ -18,5 +18,5 @@ def home():
 # Lazy import (IMPORTANT FIX)
 @app.post("/ask")
 def ask(query: QueryRequest):
-    from retr_and_gen import ask_question  # moved inside function
-    return ask_question(query.question)
+    print("request received:",query.question)
+    return {"answer": "test working"}
