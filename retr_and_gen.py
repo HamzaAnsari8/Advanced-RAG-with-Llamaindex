@@ -1,3 +1,4 @@
+print("retr_and_gen.py loaded")
 import os
 import re
 import chromadb
@@ -84,6 +85,9 @@ def load_rag():
 
 #Main function
 def ask_question(query: str):
+    print("ask question called")
+    print("starting processing")
+
     global chat_history
 
     try:
