@@ -67,7 +67,7 @@ Gemini generates final answer
 
 📁 Project Structure
 
-RAG-with-LlamaIndex/ │ ├── app.py # Streamlit UI (chat + upload + streaming) ├── ingest.py # Data ingestion & embedding pipeline ├── retr_and_gen.py # Retrieval + LLM response logic ├── requirements.txt # Dependencies │ ├── data/ # Static documents ├── uploads/ # User uploaded files ├── vectordb/ # Persistent vector database ├── ingested_files.txt # Tracks processed files │ └── README.md
+ADVANCED-RAG-with-LlamaIndex/ │ ├── app.py # Streamlit UI (chat + upload + streaming) ├── ingest.py # Data ingestion & embedding pipeline ├── retr_and_gen.py # Retrieval + LLM response logic ├── requirements.txt # Dependencies │ ├── data/ # Static documents ├── uploads/ # User uploaded files ├── vectordb/ # Persistent vector database ├── ingested_files.txt # Tracks processed files │ └── README.md
 
 ⚙️ Installation
 
