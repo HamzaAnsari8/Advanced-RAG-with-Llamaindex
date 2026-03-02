@@ -1,148 +1,170 @@
-print("retr_and_gen.py loaded")
+print("🚀 Advanced retr_and_gen.py loaded")
 import os
-import re
 import chromadb
 from dotenv import load_dotenv
-
 from llama_index.core import VectorStoreIndex, StorageContext
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.vector_stores.chroma import ChromaVectorStore
-from llama_index.core.vector_stores import MetadataFilters, ExactMatchFilter
 from llama_index.llms.google_genai import GoogleGenAI
+from rank_bm25 import BM25Okapi
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
 
-# Load env
 load_dotenv()
 
-# Check API key
-api_key = os.getenv("GOOGLE_API_KEY")
-if not api_key:
-    print("GOOGLE_API_KEY missing")
-
-# Config
+# CONFIG FILES
 VECTOR_DB_DIR = "vectordb"
 EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 LLM_MODEL = "models/gemini-flash-latest"
 
-# Globals
+api_key = os.getenv("GOOGLE_API_KEY")
+
 index = None
 llm = None
+bm25 = None
+documents_store = []
 chat_history = []
 
-
-#Lazy loader 
+# LOAD RAG
 def load_rag():
-    global index, llm
+    global index, llm, bm25, documents_store
 
     try:
-        print("Loading RAG...")
+        print("Loading Advanced RAG...")
 
-        # Embedding
-        embed_model = HuggingFaceEmbedding(
-            model_name=EMBED_MODEL
-        )
+        embed_model = HuggingFaceEmbedding(model_name=EMBED_MODEL)
 
         # Chroma DB
-        chroma_client = chromadb.PersistentClient(
-            path=VECTOR_DB_DIR
-        )
+        chroma_client = chromadb.PersistentClient(path=VECTOR_DB_DIR)
+        collection = chroma_client.get_or_create_collection("rag_collection")
 
-        # SAFE collection load
-        try:
-            collection = chroma_client.get_collection(name="rag_collection")
-        except:
-            print("Collection not found, creating new one")
-            collection = chroma_client.get_or_create_collection(name="rag_collection")
-
-        vector_store = ChromaVectorStore(
-            chroma_collection=collection
-        )
+        vector_store = ChromaVectorStore(chroma_collection=collection)
 
         storage_context = StorageContext.from_defaults(
             vector_store=vector_store
         )
 
-        # Index
         index = VectorStoreIndex.from_vector_store(
             vector_store=vector_store,
             embed_model=embed_model
         )
 
+        # BM25
+        print("📚 Preparing BM25...")
+        all_docs = collection.get()["documents"]
+
+        documents_store = all_docs
+        tokenized_docs = [doc.split() for doc in all_docs]
+
+        bm25 = BM25Okapi(tokenized_docs)
+
         # LLM
         llm = GoogleGenAI(
             model=LLM_MODEL,
             api_key=api_key,
-            temperature=0.2,
-            max_tokens=256
+            temperature=0.3,
+            max_tokens=1024
         )
 
-        print("RAG Loaded")
+        print("RAG Ready")
 
-        return index, llm
+        return index, llm, bm25
 
     except Exception as e:
-        print("ERROR IN load_rag:", e)
+        print("ERROR in load_rag:", e)
         raise e
 
-#Main function
-def ask_question(query: str):
-    print("ask question started")
-    print("ask question called")
-    print("starting processing")
+#RERANK
+print("Loading reranker...")
 
+tokenizer = AutoTokenizer.from_pretrained("cross-encoder/ms-marco-MiniLM-L-6-v2")
+rerank_model = AutoModelForSequenceClassification.from_pretrained(
+    "cross-encoder/ms-marco-MiniLM-L-6-v2"
+)
+
+def rerank(query, docs):
+    pairs = [[query, doc] for doc in docs]
+
+    inputs = tokenizer(
+        pairs, padding=True, truncation=True, return_tensors="pt"
+    )
+
+    with torch.no_grad():
+        scores = rerank_model(**inputs).logits.squeeze()
+
+    scored_docs = list(zip(docs, scores.tolist()))
+    scored_docs.sort(key=lambda x: x[1], reverse=True)
+
+    return [doc for doc, _ in scored_docs[:3]]
+
+#MAIN FUNCTION
+def ask_question(query: str):
     global chat_history
 
     try:
-        # Load RAG only when needed
-        index, llm = load_rag()
-        print("load_rag completed")
+        print("\n🔍 Query:", query)
 
-        # Build context
-        full_query = ""
-        for q, a in chat_history[-2:]:
-            full_query += f"User: {q}\nAssistant: {a}\n"
+        index, llm, bm25 = load_rag()
 
-        full_query += f"User: {query}\nAssistant:"
+        # CHAT HISTORY
+        context_query = query
+        if len(chat_history) > 0:
+            last_q, last_a = chat_history[-1]
+            context_query = last_q + " " + query
 
-        filters = None
+        # VECTOR SEARCH
+        vector_results = index.as_retriever(
+            similarity_top_k=3
+        ).retrieve(context_query)
 
-        # Detect filename
-        match = re.search(r"\b\w+\.(txt|pdf|docx)\b", query.lower())
-        if match:
-            file_name = match.group().lower()
+        vector_docs = [node.text for node in vector_results]
 
-            filters = MetadataFilters(
-                filters=[
-                    ExactMatchFilter(
-                        key="file_name",
-                        value=file_name
-                    )
-                ]
-            )
-        print("creating query engine")
-        # Query engine
-        query_engine = index.as_query_engine(
-            llm=llm,
-            similarity_top_k=3,
-            response_mode="compact",
-            filters=filters
-        )
+        # BM25 SEARCH
+        tokenized_query = context_query.split()
+        bm25_scores = bm25.get_scores(tokenized_query)
 
-        print("calling llm (this may hang)")
+        top_bm25_idx = sorted(
+            range(len(bm25_scores)),
+            key=lambda i: bm25_scores[i],
+            reverse=True
+        )[:3]
 
-        response = query_engine.query(full_query)
-        print("got response from llm")
-        # Extract answer
-        answer_text = response.response
+        bm25_docs = [documents_store[i] for i in top_bm25_idx]
 
-        # Extract sources
-        sources = []
-        if hasattr(response, "source_nodes") and response.source_nodes:
-            for node in response.source_nodes:
-                file_name = node.metadata.get("file_name", "Unknown")
-                if file_name not in sources:
-                    sources.append(file_name)
+        # HYBRID
+        combined_docs = list(set(vector_docs + bm25_docs))
+        print("📊 Hybrid docs:", len(combined_docs))
 
-        # Save history
+        # RERANK
+        top_docs = rerank(context_query, combined_docs)
+
+        context = "\n\n".join(top_docs)
+
+        #BETTER PROMPT
+        prompt = f"""
+You are an intelligent AI assistant.
+
+Use ONLY the provided context to answer.
+If answer is not found, say "Not enough information".
+
+Context:
+{context}
+
+Question:
+{query}
+
+Answer clearly:
+"""
+
+        print("Generating...")
+
+        response = llm.complete(prompt)
+        answer_text = str(response)
+
+        # SOURCES
+        sources = list(set([doc[:150] for doc in top_docs]))
+
+        # SAVE HISTORY
         chat_history.append((query, answer_text))
         chat_history = chat_history[-3:]
 
@@ -152,7 +174,7 @@ def ask_question(query: str):
         }
 
     except Exception as e:
-        print(" ERROR IN ask_question:", e)
+        print("ERROR:", e)
         return {
             "answer": f"Error: {str(e)}",
             "sources": []

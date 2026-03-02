@@ -9,5 +9,10 @@ pypdf
 python-docx
 tqdm
 docx2txt
-fastapi
-uvicorn
+
+
+streamlit
+rank-bm25
+torch
+transformers
+

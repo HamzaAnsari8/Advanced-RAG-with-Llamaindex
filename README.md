@@ -1,117 +1,213 @@
-# 📚 RAG with LlamaIndex (Gemini API)
+🤖 Advanced RAG Chatbot (LlamaIndex + Gemini + Streamlit)
 
-This project implements a **Retrieval-Augmented Generation (RAG)** system using **LlamaIndex**, **Google Gemini API**, and **ChromaDB**. It allows users to query their own documents by retrieving relevant context from a vector database and generating accurate, context-aware answers using Gemini.
+An end-to-end Retrieval-Augmented Generation (RAG) chatbot that allows users to upload documents and ask questions based on their content.
+Built using:
 
-The project is designed to be simple, clean, and easy to understand, making it suitable for learning, academic projects, and real-world applications.
+LlamaIndex
 
+Google Gemini (LLM)
 
-# 🚀 Features
-- Document ingestion and preprocessing  
-- Text chunking using LlamaIndex  
-- Embedding generation using Gemini API  
-- Vector storage and retrieval with ChromaDB  
-- Semantic search and context-aware answer generation  
-- Modular and extensible design  
+ChromaDB (Vector Database)
 
+Streamlit (UI)
 
-# 🧠 Project Structure
-RAG-with-LlamaIndex-Gemini/  
-├── data/                  # Input documents (PDF / TXT / DOCX)  
-├── chroma_db/             # ChromaDB vector storage  
-├── ingest.py              # Document ingestion & indexing  
-├── retr_and_gen.py        # Retrieval and response generation  
-├── requirements.txt       # Python dependencies  
-├── .env                   # Environment variables  
-└── README.md              # Project documentation  
+HuggingFace Embeddings
 
+🚀 Features
 
-# 🛠️ Tech Stack
-- Python 3.9+  
-- LlamaIndex  
-- Google Gemini API  
-- ChromaDB  
-- python-dotenv  
+💬 Chatbot Capabilities
 
+Ask questions from your own documents
 
-# 🔐 Environment Setup
-Create a `.env` file in the project root directory and add your Gemini API key:
+Context-aware responses using RAG pipeline
 
-GOOGLE_API_KEY="your_gemini_api_key_here"  
+Streaming responses (word-by-word like ChatGPT)
 
+Source citation support
 
-# 📦 Installation
-1. Clone the repository  
-git clone https://github.com/HamzaAnsari8/rag-llamaindex-gemini.git  
-cd rag-llamaindex-gemini  
+📂 Document Support
 
-2. Create and activate a virtual environment  
-python -m venv venv  
-source venv/bin/activate      # Linux / macOS  
-venv\Scripts\activate         # Windows  
+PDF (.pdf)
 
-3. Install dependencies  
-pip install -r requirements.txt  
+Text files (.txt)
 
+Word documents (.docx)
 
+⚡ Advanced Features
 
-# 📥 Document Ingestion (ingest.py)
-This script:
-- Loads documents from the `data` directory  
-- Splits documents into chunks using LlamaIndex  
-- Generates embeddings using Gemini  
-- Stores embeddings in ChromaDB  
+Persistent vector database (ChromaDB)
 
-Run ingestion whenever documents are added or updated:
+No duplicate embeddings (tracked ingestion)
 
-python ingest.py  
+Upload documents from UI
 
+Supports multiple documents
 
-# 🔍 Retrieval and Generation (retr_and_gen.py)
-This script:
-- Accepts a user query  
-- Retrieves relevant document chunks from ChromaDB  
-- Sends the retrieved context along with the query to Gemini  
-- Generates a final, context-aware answer  
+Efficient chunking + embedding
 
-Run the RAG pipeline:
+🧠 Architecture Overview
 
-python retr_and_gen.py  
+User Query → Retriever → Relevant Chunks → LLM (Gemini) → Response + Sources
 
-Example:  
-Enter your query: What is Retrieval Augmented Generation?  
-Answer: Retrieval Augmented Generation (RAG) is a technique that combines information retrieval with large language models to produce accurate and grounded responses.
+Pipeline:
 
+Documents are loaded
 
-# 🔁 RAG Workflow
-1. Documents are ingested and indexed  
-2. User submits a query  
-3. Relevant document chunks are retrieved from ChromaDB  
-4. Gemini generates an answer using the retrieved context  
+Cleaned & preprocessed
 
+Chunked into smaller pieces
 
-# 📌 Use Cases
-- Chat with PDFs and text documents  
-- Internal knowledge base assistant  
-- Research and academic support  
-- Enterprise document search  
-- AI-powered FAQ systems  
+Converted into embeddings
 
+Stored in ChromaDB
 
-# ⚠️ Notes
-- Place documents inside the `data` directory before ingestion  
-- Re-run `ingest.py` when documents change  
-- Gemini API usage may incur costs depending on usage  
+Query retrieves relevant chunks
 
+Gemini generates final answer
 
+📁 Project Structure
 
-# 🔮 Future Enhancements
-- Web UI using Streamlit or FastAPI  
-- Conversational memory  
-- Streaming responses  
-- Metadata-based filtering  
-- Cloud-hosted vector databases  
+RAG-with-LlamaIndex/ │ ├── app.py # Streamlit UI (chat + upload + streaming) ├── ingest.py # Data ingestion & embedding pipeline ├── retr_and_gen.py # Retrieval + LLM response logic ├── requirements.txt # Dependencies │ ├── data/ # Static documents ├── uploads/ # User uploaded files ├── vectordb/ # Persistent vector database ├── ingested_files.txt # Tracks processed files │ └── README.md
 
+⚙️ Installation
 
-# 👨‍💻 Author
+1️⃣ Clone Repository
+
+git clone 
+cd RAG-with-LlamaIndex
+
+2️⃣ Create Virtual Environment
+
+python -m venv venv
+venv\Scripts\activate (Windows)
+
+3️⃣ Install Dependencies
+
+pip install -r requirements.txt
+
+🔑 Environment Variables
+
+Create .env file:
+GOOGLE_API_KEY=your_gemini_api_key
+
+📥 Data Ingestion
+
+Step 1: Add files
+
+Put files inside: 
+
+data/ (manual)
+
+OR upload via UI → uploads/
+
+Step 2: Run ingestion
+
+python ingest.py
+✅ This will:
+
+Convert documents → embeddings
+
+Store in vector DB
+
+Avoid duplicates automatically
+
+💻 Run Application
+
+streamlit run app.py
+Open in browser:
+http://localhost:8501
+
+📤 Upload via UI
+
+Upload PDF / TXT / DOCX from sidebar
+
+Files saved in uploads/
+
+Then run:
+
+python ingest.py
+
+🔄 Streaming Output
+
+Answers appear word-by-word
+
+Sources appear line-by-line
+
+Improves user experience (real-time feel)
+
+🧩 Key Components
+
+🔹 LlamaIndex
+
+Handles:
+
+Document parsing
+
+Chunking
+
+Retrieval pipeline
+
+🔹 ChromaDB
+
+Stores embeddings persistently
+
+Fast similarity search
+
+🔹 HuggingFace Embeddings
+
+Model used: sentence-transformers/all-MiniLM-L6-v2
+
+🔹 Gemini (LLM)
+
+Generates final answers
+
+Uses retrieved context
+
+🛡️ Duplicate Handling
+
+✔ No duplicate embeddings
+How it works:
+
+ingested_files.txt tracks processed files
+
+Already ingested files are skipped
+
+⚠️ Notes
+
+If you delete vectordb/ → all embeddings lost
+
+If you delete ingested_files.txt → system re-ingests all files
+
+Always run ingest.py after uploading new documents
+
+🔥 Future Improvements
+
+Auto-ingestion on upload (no manual step)
+
+PDF preview in UI
+
+Chat history persistence
+
+Multi-user support
+
+API deployment (FastAPI)
+
+Docker support
+
+Cloud deployment (AWS/GCP)
+
+🧪 Example Queries
+
+What is AI?
+Summarize this document
+Explain key concepts from research paper
+
+👨‍💻 Author
+
 Hamza Ansari
-GitHub: https://github.com/HamzaAnsari8 
+
+⭐ Support
+
+If you like this project:
+⭐ Star the repo
+📢 Share it
