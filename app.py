@@ -2,15 +2,13 @@ import streamlit as st
 import os
 import time
 from retr_and_gen import ask_question
-import ingest
+from ingest import ingest
 
-# ---------------- AUTO INGEST FOR DEPLOYMENT ----------------
+#AUTO INGEST FOR DEPLOYMENT
 VECTOR_DB_DIR = "vectordb"
-
 if not os.path.exists(VECTOR_DB_DIR):
     print("Vectordb not found. Running ingestion...")
-    ingest.ingest()
-# ------------------------------------------------------------
+    ingest()
 
 # PAGE
 st.set_page_config(
