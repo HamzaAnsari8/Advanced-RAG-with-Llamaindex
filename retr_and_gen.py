@@ -31,7 +31,6 @@ def normalize(text):
     text = text.replace(".pdf", "")
     text = text.replace(".txt", "")
     text = text.replace(".docx", "")
-
     text = text.replace("_", " ")
     text = text.replace("-", " ")
     return text.strip()
@@ -40,11 +39,9 @@ def filename_match(query, filename):
     q = normalize(query)
     f = normalize(filename)
 
-    # exact filename match
     if f in q:
         return True
 
-    # word based match
     f_words = f.split()
     for word in f_words:
         if word in q:
@@ -69,13 +66,18 @@ def load_rag():
 
     # BM25
     print("Preparing BM25...")
-    all_docs = collection.get()["documents"]
+    all_docs = collection.get().get("documents", [])
     documents_store = all_docs
     tokenized_docs = [doc.split() for doc in all_docs]
-    bm25 = BM25Okapi(tokenized_docs)
+
+    if len(tokenized_docs) == 0:
+        print("⚠ No documents found for BM25")
+        bm25_instance = None
+    else:
+        bm25_instance = BM25Okapi(tokenized_docs)
 
     # LLM
-    llm = GoogleGenAI(
+    llm_instance = GoogleGenAI(
         model=LLM_MODEL,
         api_key=api_key,
         temperature=0.3,
@@ -83,14 +85,13 @@ def load_rag():
     )
 
     print("RAG Ready")
-    return index, llm, bm25
+    return index, llm_instance, bm25_instance
 
 # RERANKER
 print("Loading reranker...")
 tokenizer = AutoTokenizer.from_pretrained(
     "cross-encoder/ms-marco-MiniLM-L-6-v2"
 )
-
 rerank_model = AutoModelForSequenceClassification.from_pretrained(
     "cross-encoder/ms-marco-MiniLM-L-6-v2"
 )
@@ -98,8 +99,8 @@ rerank_model = AutoModelForSequenceClassification.from_pretrained(
 def rerank(query, docs):
     if len(docs) == 0:
         return []
-    pairs = [[query, doc] for doc in docs]
 
+    pairs = [[query, doc] for doc in docs]
     inputs = tokenizer(
         pairs,
         padding=True,
@@ -123,7 +124,6 @@ def ask_question(query: str):
     try:
         print("\n Query:", query)
         context_query = query
-
         if len(chat_history) > 0:
             last_q, last_a = chat_history[-1]
             context_query = last_q + " " + query
@@ -132,9 +132,10 @@ def ask_question(query: str):
         vector_results = index.as_retriever(
             similarity_top_k=5
         ).retrieve(context_query)
+
         vector_docs = [node.text for node in vector_results]
 
-        #FILENAME SEARCH
+        # FILENAME SEARCH
         filename_docs = []
 
         for node in vector_results:
@@ -142,28 +143,28 @@ def ask_question(query: str):
 
             if filename_match(query, filename):
                 filename_docs.append(node.text)
-
         if len(filename_docs) > 0:
             print("File specific query detected")
             vector_docs = filename_docs
 
         # BM25 SEARCH
-        tokenized_query = context_query.split()
-        bm25_scores = bm25.get_scores(tokenized_query)
-
-        top_bm25_idx = sorted(
-            range(len(bm25_scores)),
-            key=lambda i: bm25_scores[i],
-            reverse=True
-        )[:3]
-        bm25_docs = [
-            documents_store[i]
-            for i in top_bm25_idx
-        ]
+        bm25_docs = []
+        # Only run BM25 if it exist
+        if bm25 is not None:
+            tokenized_query = context_query.split()
+            bm25_scores = bm25.get_scores(tokenized_query)
+            top_bm25_idx = sorted(
+                range(len(bm25_scores)),
+                key=lambda i: bm25_scores[i],
+                reverse=True
+            )[:3]
+            bm25_docs = [
+                documents_store[i]
+                for i in top_bm25_idx
+            ]
 
         # HYBRID
         combined_docs = list(set(vector_docs + bm25_docs))
-
         print("Hybrid docs:", len(combined_docs))
         if len(combined_docs) == 0:
             return {
@@ -173,7 +174,6 @@ def ask_question(query: str):
 
         # RERANK
         reranked_docs = rerank(context_query, combined_docs)
-
         top_docs = reranked_docs[:2]
 
         # TOKEN SAFE CONTEXT
@@ -190,13 +190,17 @@ If the answer is not present in the context say:
 
 Context:
 {context}
+
 Question:
 {query}
+
 Answer clearly:
 """
 
         print("Generating answer...")
+
         response = llm.complete(prompt)
+
         answer_text = str(response)
 
         # SOURCES
@@ -213,14 +217,16 @@ Answer clearly:
 
         # CHAT HISTORY
         chat_history.append((query, answer_text))
+
         chat_history = chat_history[-3:]
+
         return {
             "answer": answer_text,
             "sources": sources
         }
     except Exception as e:
-
         print("ERROR:", e)
+
         return {
             "answer": f"Error: {str(e)}",
             "sources": []
