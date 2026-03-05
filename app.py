@@ -2,12 +2,15 @@ import streamlit as st
 import os
 import time
 from retr_and_gen import ask_question
+import ingest
 
-# CONFIG
-UPLOAD_DIR = "uploads"
+# ---------------- AUTO INGEST FOR DEPLOYMENT ----------------
+VECTOR_DB_DIR = "vectordb"
 
-if not os.path.exists(UPLOAD_DIR):
-    os.makedirs(UPLOAD_DIR)
+if not os.path.exists(VECTOR_DB_DIR):
+    print("Vectordb not found. Running ingestion...")
+    ingest.ingest()
+# ------------------------------------------------------------
 
 # PAGE
 st.set_page_config(
@@ -19,47 +22,36 @@ st.set_page_config(
 st.title("🤖 RAG Chatbot")
 st.markdown("Ask questions from your documents")
 
-#FILE UPLOAD
-st.sidebar.header("Upload Documents")
+st.sidebar.markdown("""
+### 📚 Available Documents
 
-uploaded_files = st.sidebar.file_uploader(
-    "Upload PDF / TXT / DOCX",
-    type=["pdf", "txt", "docx"],
-    accept_multiple_files=True
-)
+- AI Freebook
+- Web Development Ebook
+- Ottoman Empire History
+- Research Proposal
+- Sample Text
+""")
 
-if uploaded_files:
-    for file in uploaded_files:
-        file_path = os.path.join(UPLOAD_DIR, file.name)
-
-        # SAVE FILE
-        with open(file_path, "wb") as f:
-            f.write(file.getbuffer())
-
-    st.sidebar.success("Files uploaded successfully!")
-
-    st.sidebar.info("Run `python ingest.py` once to update knowledge")
-
-#CHAT STATE
+# SESSION STATE
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-#USER INPUT
+# USER INPUT
 query = st.chat_input("Ask something...")
 
 if query:
     st.session_state.chat_history.append(("user", query))
 
     with st.spinner("Thinking..."):
+        time.sleep(2)  # prevents Gemini rate limit
         response = ask_question(query)
 
     answer = response["answer"]
     sources = response["sources"]
 
-    # SAVE RESONSE
     st.session_state.chat_history.append(("bot", answer, sources))
 
-#DISPLAY CHAT
+# DISPLAY CHAT
 for item in st.session_state.chat_history:
 
     if item[0] == "user":
@@ -72,7 +64,7 @@ for item in st.session_state.chat_history:
 
         with st.chat_message("assistant"):
 
-            #STREAMING ANSWER
+            # STREAMING ANSWER
             placeholder = st.empty()
             streamed_text = ""
 
@@ -81,9 +73,9 @@ for item in st.session_state.chat_history:
                 placeholder.markdown(streamed_text)
                 time.sleep(0.02)
 
-            #SOURCES 
+            # SOURCES
             if sources:
-                st.markdown("#Sources")
+                st.markdown("### 📚 Sources")
 
                 src_placeholder = st.empty()
                 src_text = ""

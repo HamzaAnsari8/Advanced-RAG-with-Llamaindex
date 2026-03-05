@@ -4,7 +4,6 @@ __pycache__/
 .vscode/
 vectordb/
 uploads/
-data/
 ingested_files.txt
 
 *.sqlite3

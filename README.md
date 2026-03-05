@@ -1,213 +1,226 @@
-🤖 Advanced RAG Chatbot (LlamaIndex + Gemini + Streamlit)
+Advanced RAG with LlamaIndex
 
-An end-to-end Retrieval-Augmented Generation (RAG) chatbot that allows users to upload documents and ask questions based on their content.
-Built using:
+An Advanced Retrieval-Augmented Generation (RAG) system built with LlamaIndex, ChromaDB, HuggingFace embeddings, Gemini LLM, and Streamlit.
+The system allows users to upload documents and ask questions using natural language. It retrieves relevant document content and generates accurate answers using a large language model.
+This implementation includes Hybrid Retrieval, Cross-Encoder Reranking, and Smart Filename Detection for more accurate document search.
 
-LlamaIndex
+Project Overview
+Traditional LLMs cannot access private documents.
+RAG solves this problem by combining:
+Vector Search
+Keyword Search (BM25)
+LLM reasoning
 
-Google Gemini (LLM)
+This project implements an advanced hybrid retrieval pipeline that improves accuracy and document understanding.
 
-ChromaDB (Vector Database)
+Features
 
-Streamlit (UI)
+Document Question Answering
 
-HuggingFace Embeddings
+Ask questions about uploaded documents such as:
 
-🚀 Features
+PDFs
 
-💬 Chatbot Capabilities
+TXT files
 
-Ask questions from your own documents
+DOCX files
 
-Context-aware responses using RAG pipeline
+Example queries:
 
-Streaming responses (word-by-word like ChatGPT)
+Summarize AI FreeBook
 
-Source citation support
+What is written in Hamza Ansari resume?
 
-📂 Document Support
+Explain Deep Learning from the document
 
-PDF (.pdf)
+Hybrid Search (Vector + BM25)
+The system combines two retrieval techniques:
+Vector Search
 
-Text files (.txt)
+Semantic similarity using embeddings
+BM25 Search
 
-Word documents (.docx)
+Keyword-based retrieval
+This improves recall and ensures relevant content is retrieved.
 
-⚡ Advanced Features
+Cross-Encoder Reranking
+Retrieved documents are reranked using a cross-encoder model
 
-Persistent vector database (ChromaDB)
+cross-encoder/ms-marco-MiniLM-L-6-v2 
+This step improves the quality of the final context sent to the LLM.
 
-No duplicate embeddings (tracked ingestion)
+Smart Filename Query Detection
 
-Upload documents from UI
+Users can search documents using:
 
-Supports multiple documents
+Exact filename:
+summarize ai_FreeBook.pdf 
 
-Efficient chunking + embedding
+Filename without extension:
+summarize ai freebook 
 
-🧠 Architecture Overview
+Partial name:
+summarize resume
 
-User Query → Retriever → Relevant Chunks → LLM (Gemini) → Response + Sources
+The system automatically detects the relevant document.
+Conversational Memory
 
-Pipeline:
+The system keeps a short chat history context, allowing follow-up questions.
+Example:
+User: summarize the AI book User: explain deep learning from it 
 
-Documents are loaded
+Source Attribution:
+The system displays which document the answer came from.
+Example:
+Sources: ai_FreeBook.pdf 
 
-Cleaned & preprocessed
+System Architecture:
 
-Chunked into smaller pieces
+User Query │ 
+   ▼
+Streamlit Interface 
+   ▼
+Query Processing
+   ▼
+Hybrid Retrieval (Vector Search + BM25)
+   ▼
+Cross Encoder Reranking 
+   ▼ 
+Top Relevant Context
+   ▼ 
+Gemini LLM 
+   ▼ 
+Final Answer + Sources 
 
-Converted into embeddings
+Project Structure:
+Advanced-RAG-with-LlamaIndex │ ├── app.py ├── ingest.py ├── retr_and_gen.py ├── vectordb/ ├── uploads/ ├── requirements.txt ├── .env └── README.md 
 
-Stored in ChromaDB
+app.py
+Streamlit user interface for document upload and chat.
 
-Query retrieves relevant chunks
+ingest.py
+Processes uploaded documents and stores embeddings in ChromaDB.
 
-Gemini generates final answer
+retr_and_gen.py
 
-📁 Project Structure
+Core RAG pipeline containing:
 
-ADVANCED-RAG-with-LlamaIndex/ │ ├── app.py # Streamlit UI (chat + upload + streaming) ├── ingest.py # Data ingestion & embedding pipeline ├── retr_and_gen.py # Retrieval + LLM response logic ├── requirements.txt # Dependencies │ ├── data/ # Static documents ├── uploads/ # User uploaded files ├── vectordb/ # Persistent vector database ├── ingested_files.txt # Tracks processed files │ └── README.md
+Hybrid retrieval
+Reranking
 
-⚙️ Installation
+LLM generation
+Filename matching
 
-1️⃣ Clone Repository
+vectordb/
+Stores the Chroma vector database.
 
-git clone 
-cd RAG-with-LlamaIndex
+uploads/
+Directory for uploaded documents.
 
-2️⃣ Create Virtual Environment
+Technologies Used:
 
-python -m venv venv
-venv\Scripts\activate (Windows)
+LlamaIndex:
+Framework for building RAG pipelines.
 
-3️⃣ Install Dependencies
+ChromaDB:
+Vector database used for storing document embeddings.
 
-pip install -r requirements.txt
+HuggingFace Embeddings:
+sentence-transformers/all-MiniLM-L6-v2 
 
-🔑 Environment Variables
+Gemini LLM:
+Google Generative AI used for answer generation.
+Cross Encoder Reranker
+cross-encoder/ms-marco-MiniLM-L-6-v2 
 
-Create .env file:
-GOOGLE_API_KEY=your_gemini_api_key
+Streamlit:
+Interactive web interface.
 
-📥 Data Ingestion
+Installation
 
-Step 1: Add files
+Clone the repository
+git clone https://github.com/yourusername/Advanced-RAG-with-LlamaIndex.git cd Advanced-RAG-with-LlamaIndex 
 
-Put files inside: 
+Create virtual environment
+python -m venv venv 
+Activate environment
+Windows
+venv\Scripts\activate 
+Linux / Mac
+source venv/bin/activate 
 
-data/ (manual)
+Install dependencies
+pip install -r requirements.txt 
 
-OR upload via UI → uploads/
+Environment Setup
 
-Step 2: Run ingestion
+Create a .env file:
+GOOGLE_API_KEY=your_google_api_key 
+You can generate the API key from:
+https://aistudio.google.com/app/apikey 
 
-python ingest.py
-✅ This will:
+Running the Application
 
-Convert documents → embeddings
-
-Store in vector DB
-
-Avoid duplicates automatically
-
-💻 Run Application
-
-streamlit run app.py
+Start the Streamlit server:
+streamlit run app.py 
 Open in browser:
-http://localhost:8501
+http://localhost:8501 
 
-📤 Upload via UI
+How It Works
 
-Upload PDF / TXT / DOCX from sidebar
+Step 1 — Upload Documents
+Supported formats:
+PDF
+TXT
+DOCX
+Documents are processed and stored in the vector database.
 
-Files saved in uploads/
+Step 2 — Document Chunking
+Documents are split into smaller chunks for better retrieval.
 
-Then run:
+Step 3 — Embedding Generation
+Each chunk is converted into vector embeddings.
 
-python ingest.py
+Step 4 — Hybrid Retrieval
+The system retrieves relevant chunks using:
+Vector similarity
+BM25 keyword search
 
-🔄 Streaming Output
+Step 5 — Reranking
+A cross-encoder reranks retrieved documents to select the most relevant context.
 
-Answers appear word-by-word
+Step 6 — LLM Answer Generation
+The Gemini model generates answers based only on the retrieved context.
 
-Sources appear line-by-line
+Example Queries:
 
-Improves user experience (real-time feel)
+Context queries:
+What is deep learning? Explain hidden markov models 
 
-🧩 Key Components
+Filename queries:
+summarize ai_FreeBook.pdf summarize resume what is written in hamza ansari resume 
+Follow-up queries
+Explain reinforcement learning from that book 
 
-🔹 LlamaIndex
+Limitations:
+Free Gemini API has rate limits and quotas
+Large documents may require chunk size optimization
+Context window is limited by model token limits
+Future Improvements
 
-Handles:
+Possible enhancements:
+Multi-document reasoning
+Metadata filtering
+Query rewriting
+Streaming responses
+Document highlighting
+Vector database scaling
 
-Document parsing
-
-Chunking
-
-Retrieval pipeline
-
-🔹 ChromaDB
-
-Stores embeddings persistently
-
-Fast similarity search
-
-🔹 HuggingFace Embeddings
-
-Model used: sentence-transformers/all-MiniLM-L6-v2
-
-🔹 Gemini (LLM)
-
-Generates final answers
-
-Uses retrieved context
-
-🛡️ Duplicate Handling
-
-✔ No duplicate embeddings
-How it works:
-
-ingested_files.txt tracks processed files
-
-Already ingested files are skipped
-
-⚠️ Notes
-
-If you delete vectordb/ → all embeddings lost
-
-If you delete ingested_files.txt → system re-ingests all files
-
-Always run ingest.py after uploading new documents
-
-🔥 Future Improvements
-
-Auto-ingestion on upload (no manual step)
-
-PDF preview in UI
-
-Chat history persistence
-
-Multi-user support
-
-API deployment (FastAPI)
-
-Docker support
-
-Cloud deployment (AWS/GCP)
-
-🧪 Example Queries
-
-What is AI?
-Summarize this document
-Explain key concepts from research paper
-
-👨‍💻 Author
-
+Author
 Hamza Ansari
+BE Computer Science Engineering
+Specialization: Artificial Intelligence & Machine Learning
 
-⭐ Support
+License
 
-If you like this project:
-⭐ Star the repo
-📢 Share it
+This project is for educational and research purposes.
